@@ -161,7 +161,7 @@ let lastIncrementTime = new Date().getTime();
 // Endpoint to get the current visitor count
 app.get("/api/visitorCount", (req, res) => {
   const currentTime = new Date().getTime();
-  if (currentTime - lastIncrementTime >= 1000) {
+  if (currentTime - lastIncrementTime >= 3600000) {
     // If an hour has passed, increment the counter
     visitorCount += 1;
     lastIncrementTime = currentTime;
