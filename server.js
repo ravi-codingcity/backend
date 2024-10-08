@@ -26,6 +26,25 @@ const referenceSchema = new mongoose.Schema({
 });
 const Reference = mongoose.model("Reference", referenceSchema);
 
+
+// Visitors Schema and Model
+
+const visitorSchema = new mongoose.Schema({
+  count: {
+    type: Number,
+    required: true,
+    default: 905 // Starting point of the counter
+  },
+  lastUpdated: {
+    type: Date,
+    required: true,
+    default: Date.now // Track when the last increment occurred
+  }
+});
+
+const Visitor = mongoose.model('Visitor', visitorSchema);
+
+
 // Helper function to get the next unique reference number
 
 const getNextReferenceNumber = async () => {
@@ -154,20 +173,37 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-let visitorCount = 905; // Initialize the counter
 
-let lastIncrementTime = new Date().getTime();
+app.get("/api/visitorCount", async (req, res) => {
+  try {
+    // Find the current visitor count from the database
+    let visitorData = await Visitor.findOne();
 
-// Endpoint to get the current visitor count
-app.get("/api/visitorCount", (req, res) => {
-  const currentTime = new Date().getTime();
-  if (currentTime - lastIncrementTime >= 3600000) {
-    // If an hour has passed, increment the counter
-    visitorCount += 1;
-    lastIncrementTime = currentTime;
+    if (!visitorData) {
+      // If there's no record, create one with the initial value
+      visitorData = new Visitor({ count: 905, lastUpdated: Date.now() });
+      await visitorData.save();
+    }
+
+    const currentTime = new Date().getTime();
+    const lastIncrementTime = new Date(visitorData.lastUpdated).getTime();
+
+    // Check if one hour has passed
+    if (currentTime - lastIncrementTime >= 3600000) {
+      // Increment the counter and update the lastIncrementTime
+      visitorData.count += 1;
+      visitorData.lastUpdated = new Date();
+      await visitorData.save();
+    }
+
+    // Send the current count to the frontend
+    res.json({ visitorCount: visitorData.count });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-  res.json({ visitorCount });
 });
+
 
 // Start the server
 app.listen(PORT, () => {
